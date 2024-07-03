@@ -385,7 +385,7 @@ class Obd2Plugin {
               response = "";
             } else if (commandMode == Mode.dtc){
               String validResponse = response.replaceAll("\n", "").replaceAll("\r", "").replaceAll(">", "").replaceAll("SEARCHING...", "");
-              dtcCodesResponse += _getDtcsFrom(
+              dtcCodesResponse += getDtcsFrom(
                   validResponse,
                   limit: "7F ${lastetCommand.contains(" ") ? lastetCommand.split(" ")[0] : lastetCommand.toString()}",
                   command: lastetCommand
@@ -439,7 +439,7 @@ class Obd2Plugin {
   }
 
 
-  List<String> _getDtcsFrom(String value, {required String limit, required String command}){
+  List<String> getDtcsFrom(String value, {required String limit, required String command}){
     String result = "";
     List<String> _dtcCodes = [];
     if (!value.contains(limit)){
