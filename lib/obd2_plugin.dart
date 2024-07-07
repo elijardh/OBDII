@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_bluetooth_serial_ble/flutter_bluetooth_serial_ble.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:math_expressions/math_expressions.dart';
 
 enum Mode {
@@ -20,10 +20,6 @@ enum Mode {
 class Obd2Plugin {
   static const MethodChannel _channel = MethodChannel('obd2_plugin');
 
-  BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
-  final FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
-
-  BluetoothConnection? connection ;
   int requestCode = 999999999999999999;
   String lastetCommand = "";
   Function(String command, String response, int requestCode)? onResponse ;
@@ -38,130 +34,7 @@ class Obd2Plugin {
     return version;
   }
 
-
-  Future<BluetoothState> get initBluetooth async {
-    _bluetoothState = await FlutterBluetoothSerial.instance.state;
-    return _bluetoothState;
-  }
-
-  Future<bool> get enableBluetooth async {
-    bool status = false;
-    if (_bluetoothState == BluetoothState.STATE_OFF) {
-      bool? newStatus = await FlutterBluetoothSerial.instance.requestEnable();
-      if (newStatus != null && newStatus != false){
-        status = true ;
-      }
-    } else {
-      status = true ;
-    }
-    return status ;
-  }
-
-
-  Future<bool> get disableBluetooth async {
-    bool status = false;
-    if (_bluetoothState == BluetoothState.STATE_ON) {
-      bool? newStatus = await FlutterBluetoothSerial.instance.requestDisable();
-      if(newStatus != null && newStatus != false){
-        newStatus = true ;
-      }
-    }
-    return status ;
-  }
-
-
-  Future<bool> get isBluetoothEnable async {
-    if (_bluetoothState == BluetoothState.STATE_OFF) {
-      return false ;
-    } else if (_bluetoothState == BluetoothState.STATE_ON) {
-      return true ;
-    } else {
-      try {
-        _bluetoothState = await initBluetooth;
-        bool newStatus = await isBluetoothEnable ;
-        return newStatus ;
-      } catch (e){
-        throw Exception("obd2 plugin not initialed");
-      }
-    }
-  }
-
-  Future<List<BluetoothDevice>> get getPairedDevices async {
-    return await _bluetooth.getBondedDevices();
-  }
-
-  Future<List<BluetoothDevice>> get getNearbyDevices async {
-    List<BluetoothDevice> discoveryDevices = [];
-    return await _bluetooth.startDiscovery().listen((event) {
-      final existingIndex = discoveryDevices.indexWhere((element) => element.address == event.device.address);
-      if (existingIndex >= 0) {
-        discoveryDevices[existingIndex] = event.device;
-      } else {
-        if (event.device.name != null){
-          discoveryDevices.add(event.device);
-        }
-      }
-    }).asFuture(discoveryDevices);
-  }
-
-  Future<List<BluetoothDevice>> get getNearbyPairedDevices async {
-    List<BluetoothDevice> discoveryDevices = [];
-    return await _bluetooth.startDiscovery().listen((event) async {
-      final existingIndex = discoveryDevices.indexWhere((element) => element.address == event.device.address);
-      if (existingIndex >= 0) {
-        if (await isPaired(event.device)){
-          discoveryDevices[existingIndex] = event.device;
-        }
-      } else {
-        if (event.device.name != null){
-          discoveryDevices.add(event.device);
-        }
-      }
-    }).asFuture(discoveryDevices);
-  }
-
-  Future<List<BluetoothDevice>> get getNearbyAndPairedDevices async {
-    List<BluetoothDevice> discoveryDevices = await _bluetooth.getBondedDevices();
-    await _bluetooth.startDiscovery().listen((event) {
-      final existingIndex = discoveryDevices.indexWhere((element) => element.address == event.device.address);
-      if (existingIndex >= 0) {
-        discoveryDevices[existingIndex] = event.device;
-      } else {
-        if (event.device.name != null){
-          discoveryDevices.add(event.device);
-        }
-      }
-    }).asFuture(discoveryDevices);
-    return discoveryDevices;
-  }
-
-
-  Future<void> getConnection(BluetoothDevice _device, Function(BluetoothConnection? connection) onConnected, Function(String message) onError) async {
-    if (connection != null){
-      await onConnected(connection);
-      return ;
-    }
-    connection = await BluetoothConnection.toAddress(_device.address);
-    if (connection != null){
-      await onConnected(connection);
-    } else {
-      throw Exception("Sorry this happened. But I can not connect to the device. But I guess the device is not nearby or you have not disconnected before. Finally, if you wants to enter into a new relationship, you must end his previous relationship");
-    }
-  }
-
-
-  Future<bool> disconnect () async {
-    if (connection?.isConnected == true) {
-      await connection?.close() ;
-      connection = null ;
-      return true ;
-    } else {
-      connection = null ;
-      return false ;
-    }
-  }
-
-  Future<int> getParamsFromJSON (String jsonString, {int lastIndex = 0, int requestCode = 4}) async {
+  Future<int> getParamsFromJSON (BluetoothCharacteristic characteristic, String jsonString, {int lastIndex = 0, int requestCode = 4}) async {
     commandMode = Mode.parameter ;
     bool configed = false ;
     List<dynamic> stm = [];
@@ -180,10 +53,10 @@ class Obd2Plugin {
       configed = true;
       sendDTCToResponse = true;
     }
-    _write(stm[lastIndex]["PID"], requestCode);
+    _write(characteristic, stm[lastIndex]["PID"], requestCode);
     if (!configed){
       Future.delayed(const Duration(milliseconds: 350), (){
-        getParamsFromJSON(jsonString, lastIndex: (lastIndex + 1));
+        getParamsFromJSON(characteristic, jsonString, lastIndex: (lastIndex + 1));
       });
     }
 
@@ -192,7 +65,7 @@ class Obd2Plugin {
 
 
 
-  Future<int> getDTCFromJSON(String stringJson, {int lastIndex = 0, int requestCode = 3}) async {
+  Future<int> getDTCFromJSON(BluetoothCharacteristic characteristic, String stringJson, {int lastIndex = 0, int requestCode = 3}) async {
     commandMode = Mode.dtc ;
     bool configed = false ;
     List<dynamic> stm = [];
@@ -210,12 +83,12 @@ class Obd2Plugin {
       configed = true;
       sendDTCToResponse = true;
     }
-    _write(stm[lastIndex]["command"], requestCode);
+    _write(characteristic, stm[lastIndex]["command"], requestCode);
 
 
     if (!configed){
       Future.delayed(const Duration(milliseconds: 1000), (){
-        getDTCFromJSON(stringJson, lastIndex: (lastIndex + 1));
+        getDTCFromJSON(characteristic, stringJson, lastIndex: (lastIndex + 1));
       });
     }
 
@@ -233,7 +106,7 @@ class Obd2Plugin {
   //  });
   // Stop loading ...
   /// Thank you for reading this document.
-  Future<int> configObdWithJSON(String stringJson, {int lastIndex = 0, int requestCode = 2}) async {
+  Future<int> configObdWithJSON(BluetoothCharacteristic characteristic, String stringJson, {int lastIndex = 0, int requestCode = 2}) async {
     commandMode = Mode.config ;
     bool configed = false ;
     List<dynamic> stm = [];
@@ -246,7 +119,7 @@ class Obd2Plugin {
     if (stm.isEmpty){
       throw Exception("Are you joking me ?, send me configuration json list text.");
     }
-    _write(stm[lastIndex]["command"], requestCode);
+    _write(characteristic, stm[lastIndex]["command"], requestCode);
     index = lastIndex ;
     if ((stm.length - 1) == index){
       configed = true;
@@ -254,52 +127,20 @@ class Obd2Plugin {
 
     if (!configed){
       Future.delayed(Duration(milliseconds: stm[lastIndex]["command"] == "AT Z" || stm[lastIndex]["command"] == "ATZ" ? 1000 : 100), (){
-        configObdWithJSON(stringJson, lastIndex: (lastIndex + 1));
+        configObdWithJSON(characteristic, stringJson, lastIndex: (lastIndex + 1));
       });
     }
 
     return (stm.length * 150 + 1500);
   }
 
-
-
-
-  Future<bool> pairWithDevice(BluetoothDevice _device) async {
-    bool paired = false;
-    bool? isPaired = await _bluetooth.bondDeviceAtAddress(_device.address);
-    if (isPaired != null){
-      paired = isPaired ;
-    }
-    return paired ;
-  }
-
-  Future<bool> unpairWithDevice(BluetoothDevice _device) async {
-    bool unpaired = false;
-    try {
-      bool? isUnpaired = await _bluetooth.removeDeviceBondWithAddress(_device.address);
-      if (isUnpaired != null){
-        unpaired = isUnpaired;
-      }
-    } catch (e) {
-      unpaired = false ;
-    }
-    return unpaired;
-  }
-
-  Future<bool> isPaired (BluetoothDevice _device) async {
-    BluetoothBondState state = await _bluetooth.getBondStateForAddress(_device.address);
-    return state.isBonded;
-  }
-
-  Future<bool> get hasConnection async {
-    return connection != null ;
-  }
-
-  Future<void> _write(String command, int requestCode) async {
+  Future<void> _write(BluetoothCharacteristic characteristic, String command, int requestCode) async {
     lastetCommand = command;
     this.requestCode = requestCode ;
-    connection?.output.add(Uint8List.fromList(utf8.encode("$command\r\n"))) ;
-    await connection?.output.allSent ;
+    await characteristic.write(
+      Uint8List.fromList(utf8.encode("$command\r\n")),
+    );
+
   }
 
   double _volEff = 0.8322 ;
@@ -321,19 +162,21 @@ class Obd2Plugin {
   }
 
 
-  Future<bool> get isListenToDataInitialed async {
+  bool get isListenToDataInitialed {
     return onResponse != null ;
   }
 
-
-  Future<void> setOnDataReceived(Function(String command, String response, int requestCode) onResponse) async {
+  Future<void> setOnDataReceived(BluetoothDevice device, BluetoothCharacteristic characteristic, Function(String command, String response, int requestCode) onResponse) async {
     String response = "";
     if (this.onResponse != null){
       throw Exception("onDataReceived is preset and you can not reprogram it");
     } else {
-      this.onResponse = onResponse ;
-      connection?.input?.listen((Uint8List data){
-        Uint8List bytes = Uint8List.fromList(data.toList());
+      this.onResponse = onResponse;
+
+      final subscription = characteristic.onValueReceived.listen((data) {
+        // final response = data.map((e) => e.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
+
+        Uint8List bytes = Uint8List.fromList(data);
         String string = String.fromCharCodes(bytes);
         if (!string.contains('>')) {
           response += string ;
@@ -384,6 +227,7 @@ class Obd2Plugin {
               lastetCommand = "";
               response = "";
             } else if (commandMode == Mode.dtc){
+              print("dtc mode");
               String validResponse = response.replaceAll("\n", "").replaceAll("\r", "").replaceAll(">", "").replaceAll("SEARCHING...", "");
               dtcCodesResponse += getDtcsFrom(
                   validResponse,
@@ -422,6 +266,8 @@ class Obd2Plugin {
           }
         }
       });
+
+      device.cancelWhenDisconnected(subscription);
     }
   }
 

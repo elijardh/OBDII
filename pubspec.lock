@@ -54,14 +54,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_bluetooth_serial_ble:
+  flutter_blue_plus:
     dependency: "direct main"
     description:
-      name: flutter_bluetooth_serial_ble
-      sha256: "771e46fa520e22c92f8d0b0c58c2796436c97dee17bde80beb3416c318746ccb"
+      name: flutter_blue_plus
+      sha256: ce8241302bf955bfa885457aa571cc215c10444e0c75c3e55d90b5fc05cc7e93
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.0"
+    version: "1.32.8"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -218,4 +218,4 @@ packages:
     version: "13.0.0"
 sdks:
   dart: ">=3.2.0-0 <4.0.0"
-  flutter: ">=1.20.0"
+  flutter: ">=2.5.0"

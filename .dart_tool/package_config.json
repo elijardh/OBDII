@@ -44,10 +44,10 @@
       "languageVersion": "3.2"
     },
     {
-      "name": "flutter_bluetooth_serial_ble",
-      "rootUri": "file:///Users/test/.pub-cache/hosted/pub.dev/flutter_bluetooth_serial_ble-0.5.0",
+      "name": "flutter_blue_plus",
+      "rootUri": "file:///Users/test/.pub-cache/hosted/pub.dev/flutter_blue_plus-1.32.8",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "2.15"
     },
     {
       "name": "flutter_lints",
@@ -176,7 +176,7 @@
       "languageVersion": "2.12"
     }
   ],
-  "generated": "2024-06-24T13:35:39.087083Z",
+  "generated": "2024-07-06T14:12:01.509059Z",
   "generator": "pub",
   "generatorVersion": "3.3.1"
 }
