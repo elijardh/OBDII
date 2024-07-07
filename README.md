@@ -1,3 +1,5 @@
+For Serial communication, use [main](https://github.com/Youngtard/OBDII/tree/main) branch
+
 # OBD-II Plugin
 
 **Now everyone can connect safety to elm327 🤗** with [Begaz](https://begaz.app)
