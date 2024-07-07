@@ -1,3 +1,5 @@
+For BLE communication, use [ble](https://github.com/Youngtard/OBDII/tree/ble) branch
+
 # OBD-II Plugin
 
 **Now everyone can connect safety to elm327 🤗** with [Begaz](https://begaz.app)
