@@ -1,7 +1,7 @@
 name: obd2_plugin
 description: A new Flutter project for connecting to ecu cars with car obd port & ELM327 dongle.
 version: 0.0.1
-homepage:
+homepage: sample
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
